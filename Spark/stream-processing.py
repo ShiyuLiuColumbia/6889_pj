@@ -54,7 +54,8 @@ def process_stream(stream):
                 {
                     'symbol': r[0],
                     'timestamp': time.time(),
-                    'average': r[1]
+                    'average': r[2],
+                    'variance':r[1]
                 }
             )
             try:
@@ -63,15 +64,22 @@ def process_stream(stream):
             except KafkaError as error:
                 logger.warn('Failed to send average stock price to kafka, caused by: %s', error.message)
 
+
     def pair(data):
 # bytes(nonlat, 'utf-8')
         # record = json.loads(data[1])[0]
         record = json.loads(bytes(data[1], 'utf-8'))[0]
-        return record.get('StockSymbol'), (float(record.get('LastTradePrice')), 1)
+        price = float(record.get('LastTradePrice'))
+        return record.get('StockSymbol'), (price, price**2, 1)
 
     # stream.map(pair).reduceByKey(lambda a, b: a[0] + b[0], a[1] + b[1]).map(lambda k, v: (k, v[0]/v[1])).foreachRDD(send_to_kafka)
-    stream.map(pair).reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1])).map(lambda p: (p[0], p[1][0]/p[1][1])).foreachRDD(send_to_kafka)
-
+    stream.map(pair).reduceByKey(
+        lambda a, b: (a[0] + b[0], # summation
+                      a[1] + b[1], # square summation
+                      a[2] + b[2])).map(lambda p: (p[0], # summation
+                                                   p[1][1]/p[1][2] - (p[1][0]/p[1][1])**2, #variance
+                                                   p[1][0]/p[1][2] #average
+                                                   )).foreachRDD(send_to_kafka)
 if __name__ == '__main__':
     if len(sys.argv) != 4:
         print("Usage: stream-process.py [topic] [target-topic] [broker-list]")
