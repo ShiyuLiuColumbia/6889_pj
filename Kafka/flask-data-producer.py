@@ -106,11 +106,11 @@ def fetch_price( symbol):
                                 )
         price = response.json()
 
-        price = price['quote']['latestPrice']
-
+        price = price['quote']['latestPrice']*random.randint(0, 1)*0.1
+        logger.info("price:"+ str(price))
         # price = random.randint(30, 120)
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%dT%H:%MZ')
-        payload = ('[{"StockSymbol":"AAPL","LastTradePrice":%d,"LastTradeDateTime":"%s"}]' % (price, timestamp)).encode('utf-8')
+        payload = ('[{"StockSymbol":"%s","LastTradePrice":%d,"LastTradeDateTime":"%s"}]' % (symbol, price, timestamp)).encode('utf-8')
 
         logger.debug('Retrieved stock info %s', price)
         producer.send(topic=topic_name, value=payload, timestamp_ms=time.time())
@@ -133,9 +133,10 @@ def add_stock(symbol):
     else:
         # symbol = symbol.encode('utf-8')
         symbols.add(symbol)
-        logger.info('Add stock retrieve job %s, %s' % (symbol, type(symbol)))
+
 
         schedule.add_job(fetch_price, 'interval', [symbol], seconds=2, id=symbol)
+        logger.info('Add stock retrieve job %s, %s' % (symbol, type(symbol)))
     return jsonify(results=list(symbols)), 200
 
 
