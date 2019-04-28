@@ -1,6 +1,7 @@
 $(function () {
 
     var data_points = [];
+    var variance_points = [];
 
     $("#chart").height($(window).height() - $("#header").height() * 2);
 
@@ -15,6 +16,8 @@ $(function () {
         $(this).remove();
         var i = getSymbolIndex(symbol, data_points);
         data_points.splice(i, 1);
+        var j = getSymbolIndex(symbol, variance_points);
+        variance_points.splice(j, 1);
         console.log(data_points);
     });
 
@@ -29,6 +32,10 @@ $(function () {
 
         $("#stock-symbol").val("");
         data_points.push({
+            values: [],
+            key: symbol
+        });
+        variance_points.push({
             values: [],
             key: symbol
         });
@@ -70,8 +77,13 @@ $(function () {
 
     function loadGraph() {
         "use strict";
+        // d3.select('#chart svg')
+        //     .datum(data_points)
+        //     .transition()
+        //     .duration(5)
+        //     .call(chart);
         d3.select('#chart svg')
-            .datum(data_points)
+            .datum(variance_points)
             .transition()
             .duration(5)
             .call(chart);
@@ -85,6 +97,9 @@ $(function () {
         var parsed = JSON.parse(message);
         var timestamp = parsed['timestamp'];
         var average = parsed['average'];
+        var variance = parsed['variance'];
+        console.log("=========================",variance);
+
         var symbol = parsed['symbol'];
         var point = {};
         point.x = timestamp;
@@ -98,6 +113,19 @@ $(function () {
         if (data_points[i].values.length > 100) {
             data_points[i].values.shift();
         }
+        var pointv = {};
+        pointv.x = timestamp;
+        pointv.y = variance;
+
+        console.log(pointv);
+
+        var j = getSymbolIndex(symbol, variance_points);
+
+        variance_points[j].values.push(pointv);
+        if (variance_points[j].values.length > 100) {
+            variance_poixnts[j].values.shift();
+        }
+        console.log(variance_points);
         loadGraph();
     }
 

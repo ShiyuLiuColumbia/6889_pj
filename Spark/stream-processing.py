@@ -77,7 +77,7 @@ def process_stream(stream):
         lambda a, b: (a[0] + b[0], # summation
                       a[1] + b[1], # square summation
                       a[2] + b[2])).map(lambda p: (p[0], # summation
-                                                   p[1][1]/p[1][2] - (p[1][0]/p[1][1])**2, #variance
+                                                   p[1][1]/p[1][2] - (p[1][0]/p[1][2])**2, #variance
                                                    p[1][0]/p[1][2] #average
                                                    )).foreachRDD(send_to_kafka)
 if __name__ == '__main__':
