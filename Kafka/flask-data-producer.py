@@ -106,7 +106,7 @@ def fetch_price( symbol):
                                 )
         price = response.json()
 
-        price = price['quote']['latestPrice']*random.randint(0, 1)*0.1
+        price = price['quote']['latestPrice']* 0.01 * random.randint(50,150)
         logger.info("price:"+ str(price))
         # price = random.randint(30, 120)
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%dT%H:%MZ')
@@ -122,7 +122,6 @@ def fetch_price( symbol):
 
 
 @app.route('/<symbol>', methods=['POST'])
-# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def add_stock(symbol):
     if not symbol:
         return jsonify({
@@ -135,7 +134,7 @@ def add_stock(symbol):
         symbols.add(symbol)
 
 
-        schedule.add_job(fetch_price, 'interval', [symbol], seconds=2, id=symbol)
+        schedule.add_job(fetch_price, 'interval', [symbol], seconds=3, id=symbol)
         logger.info('Add stock retrieve job %s, %s' % (symbol, type(symbol)))
     return jsonify(results=list(symbols)), 200
 

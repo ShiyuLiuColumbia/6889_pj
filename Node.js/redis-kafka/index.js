@@ -2,7 +2,9 @@
 
 var argv = require('minimist')(process.argv.slice(2));
 var port = argv['port'];
+var price_topic = argv['price_topic']
 var kafka_topic = argv['kafka_topic'];
+var kafka_window_topic = argv['kafka_window_topic'];
 var kafka_broker = argv['kafka_broker'];
 
 
@@ -16,18 +18,20 @@ var io = require('socket.io')(server);
 // - setup kafka consumer
 var kafka = require('kafka-node');
 var Consumer = kafka.Consumer;
-var Client = kafka.Client;
-var client = new kafka.KafkaClient()
+// var Client = kafka.Client;
+var client = new kafka.KafkaClient();
 console.log('Creating a kafka consumer');
 var consumer = new Consumer(
 		client,
-		[{topic:kafka_topic}]
+		[{topic:kafka_topic}, {topic:kafka_window_topic},{topic:price_topic}]
 	);
-console.log('Subscribing to kafka topic %s', kafka_topic);
+console.log('Subscribing to kafka topic %s and %s', kafka_topic, kafka_window_topic);
 consumer.on('message',function(message){
     console.log('Received new data from kafka %s',JSON.stringify(message));
     io.sockets.emit('data', JSON.stringify(message));	
 })
+
+
 
 
 
