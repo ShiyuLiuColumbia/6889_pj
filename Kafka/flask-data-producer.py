@@ -4,6 +4,7 @@ import json
 import time
 import random
 import datetime
+import requests
 
 from googlefinance import getQuotes
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -13,7 +14,7 @@ from flask import (
     request,
     jsonify
 )
-from flask.ext.cors import CORS, cross_origin
+# from flask.ext.cors import CORS, cross_origin
 
 from kafka import KafkaProducer
 from kafka.errors import (
@@ -27,8 +28,8 @@ logger = logging.getLogger('data-producer')
 logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
-cors = CORS(app, resources={r"/": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
+# cors = CORS(app, resources={r"/": {"origins": "*"}})
+# app.config['CORS_HEADERS'] = 'Content-Type'
 # CORS(app)
 app.config.from_envvar('ENV_CONFIG_FILE')
 kafka_broker = app.config['CONFIG_KAFKA_ENDPOINT']
@@ -95,10 +96,21 @@ def fetch_price( symbol):
     logger.debug('Start to fetch stock price for %s', symbol)
     try:
         # price = json.dumps(getQuotes(symbol))
+        # symbol = "GOOG"
+        url = 'https://investors-exchange-iex-trading.p.rapidapi.com/stock/' + symbol + '/book'
+        response = requests.get(url,
+                                headers={
+                                    "X-RapidAPI-Host": "investors-exchange-iex-trading.p.rapidapi.com",
+                                    "X-RapidAPI-Key": "cd4641fc4emshec67ca2f66d3209p108dd9jsn9b428d096e8b"
+                                }
+                                )
+        price = response.json()
 
-        price = random.randint(30, 120)
+        price = price['quote']['latestPrice']* 0.01 * random.randint(50,150)
+        logger.info("price:"+ str(price))
+        # price = random.randint(30, 120)
         timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%dT%H:%MZ')
-        payload = ('[{"StockSymbol":"AAPL","LastTradePrice":%d,"LastTradeDateTime":"%s"}]' % (price, timestamp)).encode('utf-8')
+        payload = ('[{"StockSymbol":"%s","LastTradePrice":%d,"LastTradeDateTime":"%s"}]' % (symbol, price, timestamp)).encode('utf-8')
 
         logger.debug('Retrieved stock info %s', price)
         producer.send(topic=topic_name, value=payload, timestamp_ms=time.time())
@@ -110,7 +122,6 @@ def fetch_price( symbol):
 
 
 @app.route('/<symbol>', methods=['POST'])
-@cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def add_stock(symbol):
     if not symbol:
         return jsonify({
@@ -121,14 +132,15 @@ def add_stock(symbol):
     else:
         # symbol = symbol.encode('utf-8')
         symbols.add(symbol)
-        logger.info('Add stock retrieve job %s, %s' % (symbol, type(symbol)))
 
-        schedule.add_job(fetch_price, 'interval', [symbol], seconds=1, id=symbol)
+
+        schedule.add_job(fetch_price, 'interval', [symbol], seconds=3, id=symbol)
+        logger.info('Add stock retrieve job %s, %s' % (symbol, type(symbol)))
     return jsonify(results=list(symbols)), 200
 
 
 @app.route('/<symbol>', methods=['DELETE'])
-@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def del_stock(symbol):
     if not symbol:
         return jsonify({
